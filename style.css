@@ -1,3 +1,57 @@
-:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;color:#12305a;background:#eff5ff}*{box-sizing:border-box}body{margin:0;min-height:100vh}header{background:#fff;box-shadow:0 2px 14px #0b367518;display:flex;justify-content:space-between;gap:16px;align-items:center;padding:17px clamp(15px,5vw,70px)}.brand{display:flex;align-items:center;gap:12px}.symbol{border-radius:14px;background:linear-gradient(140deg,#0b4ec6,#5abaff);color:#fff;font-size:30px;padding:8px 16px}.brand strong{font-size:27px;letter-spacing:-1px;color:#063c95}.brand span{color:#1689e8}.brand small{display:block;color:#53739b;font-size:12px}main{width:min(1100px,94%);margin:40px auto}h1{font-size:30px;margin:0 0 7px}h2{font-size:20px;margin:0 0 18px}.muted,p{color:#57749b}button{cursor:pointer;border:0;border-radius:10px;padding:12px 17px;background:#0758d2;color:white;font-weight:700;font-size:14px}button:hover{background:#0846a4}button.secondary{background:#dceaff;color:#134887}.card{background:#fff;border:1px solid #d7e6fb;border-radius:18px;box-shadow:0 9px 30px #0b438412;padding:25px;margin-bottom:19px}.login{max-width:440px;margin:50px auto}.login h1{color:#0b54b9}form{display:grid;gap:15px}label{display:grid;gap:5px;font-weight:600;color:#24476c;font-size:14px}input,textarea,select{border:1px solid #bfd5f1;border-radius:9px;padding:12px;font:inherit;width:100%;background:white;color:#143a6a}textarea{min-height:100px;resize:vertical}input:focus,select:focus,textarea:focus{outline:2px solid #72b5ff}nav{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0}nav button{background:#e1edff;color:#12539d}nav button.active{background:#0758d2;color:white}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}.item{border:1px solid #e1ebfa;padding:15px;border-radius:12px;margin:9px 0;background:#fbfdff}.item strong{color:#0a50ae}.meta{font-size:13px;color:#6584a7;margin-top:5px}.status{display:inline-block;background:#e4f0ff;color:#105bb4;padding:5px 9px;border-radius:20px;font-size:12px;font-weight:700}#alert:not(:empty){padding:13px;border-radius:10px;background:#e3f0ff;margin:15px 0;color:#124b92}#alert.error{background:#ffe8ec;color:#a01e42}#userbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}#userbar span{font-size:13px;color:#456896}footer{text-align:center;color:#7895b7;padding:35px;font-size:13px}@media(max-width:600px){header{padding:12px}.brand strong{font-size:22px}.brand small{font-size:10px}main{margin:22px auto}.card{padding:17px}#userbar span{display:none}}
-
-.acoes-orcamento{display:flex;flex-wrap:wrap;gap:8px;margin-top:15px}button:disabled{opacity:.45;cursor:not-allowed}
+/* LOTERIATECH — Tema Azul-Marinho, Laranja e Branco
+   Alteracao somente visual. Compativel com a Etapa 4. */
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #122744;
+  background: #f1f5fb;
+  --lt-navy: #092b5a;
+  --lt-navy-deep: #061e42;
+  --lt-orange: #f47b20;
+  --lt-orange-hover: #db6310;
+  --lt-white: #fff;
+  --lt-border: #dbe4f1;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; background: linear-gradient(180deg,#e8eff9 0,#f6f8fc 260px,#f6f8fc 100%); }
+header { background: linear-gradient(115deg,var(--lt-navy-deep),var(--lt-navy)); box-shadow: 0 5px 24px #071d3c2e; display:flex; justify-content:space-between; gap:16px; align-items:center; padding:17px clamp(15px,5vw,70px); border-bottom:4px solid var(--lt-orange); }
+.brand { display:flex; align-items:center; gap:12px; }
+.symbol { border-radius:14px; background:linear-gradient(140deg,#ff9a45,#ef6f16); color:var(--lt-white); font-size:30px; padding:8px 16px; box-shadow:0 5px 12px #00000025; }
+.brand strong { font-size:27px; letter-spacing:-1px; color:var(--lt-white); }
+.brand span { color:#ffa75b; }
+.brand small { display:block; color:#d7e6fa; font-size:12px; }
+main { width:min(1100px,94%); margin:40px auto; }
+h1 { font-size:30px; margin:0 0 7px; color:var(--lt-navy); }
+h2 { font-size:20px; margin:0 0 18px; color:var(--lt-navy); }
+.muted, p { color:#536b88; }
+button { cursor:pointer; border:0; border-radius:10px; padding:12px 17px; background:var(--lt-orange); color:var(--lt-white); font-weight:700; font-size:14px; transition:background .16s ease, transform .16s ease; }
+button:hover { background:var(--lt-orange-hover); }
+button:active { transform:translateY(1px); }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline:3px solid #f7ad68; outline-offset:2px; }
+button.secondary { background:#e5edfa; color:var(--lt-navy); }
+button.secondary:hover { background:#ccdbee; }
+button:disabled { opacity:.45; cursor:not-allowed; }
+.card { background:var(--lt-white); border:1px solid var(--lt-border); border-radius:18px; box-shadow:0 12px 34px #092b5a12; padding:25px; margin-bottom:19px; }
+.login { max-width:440px; margin:50px auto; border-top:5px solid var(--lt-orange); }
+.login h1 { color:var(--lt-navy); }
+form { display:grid; gap:15px; }
+label { display:grid; gap:5px; font-weight:600; color:#1c3c66; font-size:14px; }
+input,textarea,select { border:1px solid #bfd0e5; border-radius:9px; padding:12px; font:inherit; width:100%; background:var(--lt-white); color:#143455; }
+textarea { min-height:100px; resize:vertical; }
+nav { display:flex; flex-wrap:wrap; gap:8px; margin:22px 0; }
+nav button { background:#e4ecf7; color:var(--lt-navy); }
+nav button:hover { background:#cbdaf0; }
+nav button.active { background:var(--lt-navy); color:var(--lt-white); box-shadow:inset 0 -3px 0 var(--lt-orange); }
+nav button.active:hover { background:#113e77; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:18px; }
+.item { border:1px solid #dee7f3; padding:15px; border-radius:12px; margin:9px 0; background:#fbfcff; border-left:3px solid #f8a15b; }
+.item strong { color:var(--lt-navy); }
+.meta { font-size:13px; color:#607994; margin-top:5px; }
+.status { display:inline-block; background:#fff0e3; color:#97450e; padding:5px 9px; border:1px solid #ffd5b3; border-radius:20px; font-size:12px; font-weight:700; }
+#alert:not(:empty) { padding:13px; border-radius:10px; background:#e6f0ff; border-left:4px solid #235b9a; margin:15px 0; color:#143e72; }
+#alert.error { background:#ffe7eb; border-color:#bd3350; color:#9d1533; }
+#userbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+#userbar span { font-size:13px; color:#e2ebf7; }
+#userbar button { background:var(--lt-orange); }
+footer { text-align:center; color:#627d9d; padding:35px; font-size:13px; }
+.acoes-orcamento { display:flex; flex-wrap:wrap; gap:8px; margin-top:15px; }
+@media(max-width:600px) { header { padding:12px; } .brand strong { font-size:22px; } .brand small { font-size:10px; } main { margin:22px auto; } .card { padding:17px; } #userbar span { display:none; } }
