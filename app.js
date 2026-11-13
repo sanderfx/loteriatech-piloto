@@ -12,8 +12,8 @@ function loginView(){document.getElementById('userbar').innerHTML='';app.innerHT
 async function login(e){e.preventDefault();notice('Entrando...');const f=new FormData(e.target);const {error}=await db.auth.signInWithPassword({email:f.get('email'),password:f.get('password')});if(error)return errMsg(error);await initUser();}
 async function initUser(){const {data:{user:u},error}=await db.auth.getUser();if(error||!u){user=null;profile=null;loginView();return;}user=u;const {data:p,error:pe}=await db.from('perfis').select('*').eq('id',user.id).maybeSingle();if(pe)return errMsg(pe);if(!p||!p.ativo){await db.auth.signOut();user=null;profile=null;loginView();notice('Seu usuário ainda não foi vinculado a um perfil ativo. Peça ao administrador para cadastrar seu perfil no SQL Editor.',true);return;}profile=p;tab='inicio';notice('');render();}
 async function logout(){await db.auth.signOut();user=null;profile=null;notice('Sessão encerrada.');loginView();}
-function render(){let admin=profile.tipo==='admin';document.getElementById('userbar').innerHTML=`<span>${esc(profile.nome)} • ${admin?'Administrador':'Lotérica'}</span><button class="secondary" id="sair">Sair</button>`;document.getElementById('sair').onclick=logout;const tabs=admin?['inicio','chamados','orcamentos','lotericas','categorias']:['inicio','abrir','chamados','orcamentos'];const names={inicio:'Início',abrir:'Abrir chamado',chamados:'Chamados',orcamentos:'Orçamentos',lotericas:'Lotéricas',categorias:'Categorias'};app.innerHTML=`<h1>${admin?'Painel administrativo':'Área da lotérica'}</h1><p>Olá, ${esc(profile.nome)}. Acompanhe os serviços da LoteriaTech.</p><nav>${tabs.map(t=>`<button data-tab="${t}" class="${t===tab?'active':''}">${names[t]}</button>`).join('')}</nav><div id="content"></div>`;document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;render();});content();}
-async function content(){const target=document.getElementById('content');target.innerHTML='<div class="card">Carregando...</div>';try{if(tab==='inicio')await home(target);if(tab==='chamados')await tickets(target);if(tab==='orcamentos')await quotes(target);if(tab==='lotericas')await branches(target);if(tab==='categorias')await categories(target);if(tab==='abrir')await newTicket(target);}catch(e){errMsg(e);target.innerHTML='<div class="card">Não foi possível carregar esta seção.</div>';}}
+function render(){let admin=profile.tipo==='admin';document.getElementById('userbar').innerHTML=`<span>${esc(profile.nome)} • ${admin?'Administrador':'Lotérica'}</span><button class="secondary" id="sair">Sair</button>`;document.getElementById('sair').onclick=logout;const tabs=admin?['inicio','chamados','orcamentos','visitas','lotericas','categorias']:['inicio','abrir','chamados','orcamentos','visitas'];const names={inicio:'Início',abrir:'Abrir chamado',chamados:'Chamados',orcamentos:'Orçamentos',visitas:'Visitas técnicas',lotericas:'Lotéricas',categorias:'Categorias'};app.innerHTML=`<h1>${admin?'Painel administrativo':'Área da lotérica'}</h1><p>Olá, ${esc(profile.nome)}. Acompanhe os serviços da LoteriaTech.</p><nav>${tabs.map(t=>`<button data-tab="${t}" class="${t===tab?'active':''}">${names[t]}</button>`).join('')}</nav><div id="content"></div>`;document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;render();});content();}
+async function content(){const target=document.getElementById('content');target.innerHTML='<div class="card">Carregando...</div>';try{if(tab==='inicio')await home(target);if(tab==='chamados')await tickets(target);if(tab==='orcamentos')await quotes(target);if(tab==='visitas')await visits(target);if(tab==='lotericas')await branches(target);if(tab==='categorias')await categories(target);if(tab==='abrir')await newTicket(target);}catch(e){errMsg(e);target.innerHTML='<div class="card">Não foi possível carregar esta seção.</div>';}}
 async function home(target){let {data,error}=await db.from('chamados').select('id,status,numero,created_at').order('created_at',{ascending:false}).limit(300);if(error)throw error;const open=data.filter(x=>x.status!=='Serviço concluído'&&x.status!=='Nota fiscal emitida');target.innerHTML=`<div class="grid"><div class="card"><h2>Total de chamados</h2><h1>${data.length}${data.length===300?'+':''}</h1></div><div class="card"><h2>Em aberto</h2><h1>${open.length}${data.length===300?'+':''}</h1></div><div class="card"><h2>Concluídos</h2><h1>${data.filter(x=>['Serviço concluído','Nota fiscal emitida'].includes(x.status)).length}${data.length===300?'+':''}</h1></div></div><div class="card"><h2>Últimos chamados</h2>${data.slice(0,5).map(t=>`<div class="item"><strong>#${num(t.numero)}</strong> <span class="status">${esc(t.status)}</span><div class="meta">${date(t.created_at)}</div></div>`).join('Nenhum chamado até o momento.')}</div>`;}
 async function branches(target){if(profile.tipo!=='admin')return;const {data,error}=await db.from('lotericas').select('*').order('created_at',{ascending:false});if(error)throw error;target.innerHTML=`<div class="grid"><section class="card"><h2>Cadastrar lotérica</h2><form id="branch"><label>Nome da lotérica<input name="nome" required minlength="2"></label><label>Responsável<input name="responsavel"></label><label>Telefone<input name="telefone"></label><label>E-mail<input type="email" name="email"></label><label>Endereço<input name="endereco"></label><label>Bairro<input name="bairro"></label><label>Cidade<input name="cidade"></label><label>UF<input name="uf" maxlength="2"></label><button>Cadastrar</button></form></section><section class="card"><h2>Lotéricas cadastradas (${data.length})</h2>${data.map(b=>`<div class="item"><strong>${esc(b.nome)}</strong><div class="meta">${esc(b.cidade)} / ${esc(b.uf)} • ${esc(b.telefone)}</div><div class="meta">ID para vincular usuário: <code>${esc(b.id)}</code></div></div>`).join('Nenhuma lotérica.')}</section></div>`;document.getElementById('branch').onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));const {error}=await db.from('lotericas').insert(f);if(error)return errMsg(error);notice('Lotérica cadastrada. Para criar login, siga o guia do Supabase.');content();};}
 async function categories(target){const {data,error}=await db.from('categorias').select('*').order('nome');if(error)throw error;target.innerHTML=`<div class="grid"><div class="card"><h2>Nova categoria</h2><form id="category"><label>Nome<input name="nome" minlength="3" required></label><button>Adicionar</button></form></div><div class="card"><h2>Categorias</h2>${data.map(c=>`<div class="item">${esc(c.nome)}</div>`).join('Sem categorias')}</div></div>`;document.getElementById('category').onsubmit=async e=>{e.preventDefault();const nome=new FormData(e.target).get('nome').trim();const {error}=await db.from('categorias').insert({nome});if(error)return errMsg(error);notice('Categoria adicionada.');content();};}
@@ -94,4 +94,55 @@ async function quotes(target){
    notice('Resposta registrada com sucesso.');await content();
   });
  }
+}
+
+// ETAPA 5 — agenda de visitas vinculadas a orçamento aprovado.
+const visitaData = d => new Date(d).toLocaleString('pt-BR', {dateStyle:'short',timeStyle:'short'});
+async function visits(target){
+ const admin=profile.tipo==='admin';
+ const {data:visitas,error:ve}=await db.from('visitas_tecnicas')
+  .select('id,chamado_id,data_agendada,observacoes,situacao,criado_em,chamados(numero,status,lotericas(nome))')
+  .order('criado_em',{ascending:false}).limit(200);
+ if(ve)throw ve;
+ let formHtml='';
+ if(admin){
+  const {data:chamados,error:ce}=await db.from('chamados')
+   .select('id,numero,status,lotericas(nome)')
+   .in('status',['Orçamento aprovado','Visita agendada'])
+   .order('created_at',{ascending:false}).limit(200);
+  if(ce)throw ce;
+  const choices=chamados.map(c=>`<option value="${esc(c.id)}">${num(c.numero)} — ${esc(c.lotericas?.nome)} (${esc(c.status)})</option>`).join('');
+  formHtml=`<section class="card"><h2>Agendar ou reagendar visita</h2><p>É necessário que o cliente já tenha aprovado o orçamento. Ao reagendar, a visita anterior fica no histórico.</p>
+  <form id="agendar-visita">
+  <label>Chamado<select name="chamado" required><option value="">Escolha um chamado aprovado</option>${choices}</select></label>
+  <label>Data e hora da visita<input name="horario" type="datetime-local" required></label>
+  <label>Observações para a visita<textarea name="observacoes" maxlength="2000" placeholder="Ex.: procurar o responsável pela unidade"></textarea></label>
+  <button type="submit" ${chamados.length?'':'disabled'}>Salvar agendamento</button></form>
+  ${chamados.length?'':'<p>Não há chamados aprovados disponíveis para agendar.</p>'}
+  </section>`;
+ }
+ const itens=visitas.map(v=>`<article class="item">
+  <strong>${num(v.chamados?.numero)} — ${esc(v.chamados?.lotericas?.nome)}</strong>
+  <span class="status">${esc({agendada:'Agendada',reagendada:'Reagendada',cancelada:'Cancelada'}[v.situacao]||v.situacao)}</span>
+  <p><strong>Data e hora:</strong> ${visitaData(v.data_agendada)}</p>
+  ${v.observacoes?`<p>${esc(v.observacoes)}</p>`:''}
+  <div class="meta">Registrada em ${visitaData(v.criado_em)}</div></article>`).join('Nenhuma visita registrada.');
+ target.innerHTML=formHtml+`<section class="card"><h2>${admin?'Agenda de visitas':'Minhas visitas técnicas'}</h2>${itens}</section>`;
+ if(!admin)return;
+ const form=target.querySelector('#agendar-visita');
+ form.onsubmit=async e=>{
+  e.preventDefault();
+  const f=new FormData(form), local=String(f.get('horario')||'');
+  const instante=new Date(local);
+  if(!local||Number.isNaN(instante.getTime())||instante.getTime()<=Date.now()){
+   notice('Selecione uma data e hora futuras.',true);return;
+  }
+  const btn=form.querySelector('button[type="submit"]');btn.disabled=true;
+  try{
+   const {error}=await db.rpc('agendar_visita',{p_chamado_id:f.get('chamado'),
+    p_data_agendada:instante.toISOString(),p_observacoes:String(f.get('observacoes')||'')});
+   if(error)throw error;
+   notice('Visita agendada no banco de dados.');await content();
+  }catch(ex){errMsg(ex);}finally{btn.disabled=false;}
+ };
 }
