@@ -76,6 +76,8 @@ input[type="file"]{padding:10px;background:#fbfcff} .acoes-orcamento{margin-top:
 .fin-table th{color:var(--lt-navy);background:#f4f7fc}
 .fin-warning{border-left:4px solid #e68b35;padding:12px;background:#fff7ef}
 
-/* Etapa 8 */
-.nf-check {display:flex;align-items:flex-start;gap:10px;line-height:1.5;}
-.nf-check input {width:auto; margin-top:4px;}
+/* Etapa 9 — Central de notificações */
+.notif-heading{display:flex;justify-content:space-between;align-items:start;gap:14px;flex-wrap:wrap}
+.notif-heading h2{margin-bottom:4px}.notif-heading small{color:#60758f}
+.notif-item{border-left:4px solid #cbd6e5}.notif-unread{border-left-color:#f47b20;background:#fffaf4}
+.notif-actions{display:flex;gap:8px;flex-wrap:wrap}.notif-actions button{padding:8px 12px;font-size:13px}
