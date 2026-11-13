@@ -55,3 +55,6 @@ nav button.active:hover { background:#113e77; }
 footer { text-align:center; color:#627d9d; padding:35px; font-size:13px; }
 .acoes-orcamento { display:flex; flex-wrap:wrap; gap:8px; margin-top:15px; }
 @media(max-width:600px) { header { padding:12px; } .brand strong { font-size:22px; } .brand small { font-size:10px; } main { margin:22px auto; } .card { padding:17px; } #userbar span { display:none; } }
+
+/* Etapa 6: fotos e conclusoes */
+input[type="file"]{padding:10px;background:#fbfcff} .acoes-orcamento{margin-top:14px} textarea{line-height:1.5}

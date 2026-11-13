@@ -12,13 +12,13 @@ function loginView(){document.getElementById('userbar').innerHTML='';app.innerHT
 async function login(e){e.preventDefault();notice('Entrando...');const f=new FormData(e.target);const {error}=await db.auth.signInWithPassword({email:f.get('email'),password:f.get('password')});if(error)return errMsg(error);await initUser();}
 async function initUser(){const {data:{user:u},error}=await db.auth.getUser();if(error||!u){user=null;profile=null;loginView();return;}user=u;const {data:p,error:pe}=await db.from('perfis').select('*').eq('id',user.id).maybeSingle();if(pe)return errMsg(pe);if(!p||!p.ativo){await db.auth.signOut();user=null;profile=null;loginView();notice('Seu usuário ainda não foi vinculado a um perfil ativo. Peça ao administrador para cadastrar seu perfil no SQL Editor.',true);return;}profile=p;tab='inicio';notice('');render();}
 async function logout(){await db.auth.signOut();user=null;profile=null;notice('Sessão encerrada.');loginView();}
-function render(){let admin=profile.tipo==='admin';document.getElementById('userbar').innerHTML=`<span>${esc(profile.nome)} • ${admin?'Administrador':'Lotérica'}</span><button class="secondary" id="sair">Sair</button>`;document.getElementById('sair').onclick=logout;const tabs=admin?['inicio','chamados','orcamentos','visitas','lotericas','categorias']:['inicio','abrir','chamados','orcamentos','visitas'];const names={inicio:'Início',abrir:'Abrir chamado',chamados:'Chamados',orcamentos:'Orçamentos',visitas:'Visitas técnicas',lotericas:'Lotéricas',categorias:'Categorias'};app.innerHTML=`<h1>${admin?'Painel administrativo':'Área da lotérica'}</h1><p>Olá, ${esc(profile.nome)}. Acompanhe os serviços da LoteriaTech.</p><nav>${tabs.map(t=>`<button data-tab="${t}" class="${t===tab?'active':''}">${names[t]}</button>`).join('')}</nav><div id="content"></div>`;document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;render();});content();}
-async function content(){const target=document.getElementById('content');target.innerHTML='<div class="card">Carregando...</div>';try{if(tab==='inicio')await home(target);if(tab==='chamados')await tickets(target);if(tab==='orcamentos')await quotes(target);if(tab==='visitas')await visits(target);if(tab==='lotericas')await branches(target);if(tab==='categorias')await categories(target);if(tab==='abrir')await newTicket(target);}catch(e){errMsg(e);target.innerHTML='<div class="card">Não foi possível carregar esta seção.</div>';}}
+function render(){let admin=profile.tipo==='admin';document.getElementById('userbar').innerHTML=`<span>${esc(profile.nome)} • ${admin?'Administrador':'Lotérica'}</span><button class="secondary" id="sair">Sair</button>`;document.getElementById('sair').onclick=logout;const tabs=admin?['inicio','chamados','orcamentos','visitas','conclusoes','lotericas','categorias']:['inicio','abrir','chamados','orcamentos','visitas','conclusoes'];const names={inicio:'Início',abrir:'Abrir chamado',chamados:'Chamados',orcamentos:'Orçamentos',visitas:'Visitas técnicas',conclusoes:'Conclusões',lotericas:'Lotéricas',categorias:'Categorias'};app.innerHTML=`<h1>${admin?'Painel administrativo':'Área da lotérica'}</h1><p>Olá, ${esc(profile.nome)}. Acompanhe os serviços da LoteriaTech.</p><nav>${tabs.map(t=>`<button data-tab="${t}" class="${t===tab?'active':''}">${names[t]}</button>`).join('')}</nav><div id="content"></div>`;document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;render();});content();}
+async function content(){const target=document.getElementById('content');target.innerHTML='<div class="card">Carregando...</div>';try{if(tab==='inicio')await home(target);if(tab==='chamados')await tickets(target);if(tab==='orcamentos')await quotes(target);if(tab==='visitas')await visits(target);if(tab==='conclusoes')await completions(target);if(tab==='lotericas')await branches(target);if(tab==='categorias')await categories(target);if(tab==='abrir')await newTicket(target);}catch(e){errMsg(e);target.innerHTML='<div class="card">Não foi possível carregar esta seção.</div>';}}
 async function home(target){let {data,error}=await db.from('chamados').select('id,status,numero,created_at').order('created_at',{ascending:false}).limit(300);if(error)throw error;const open=data.filter(x=>x.status!=='Serviço concluído'&&x.status!=='Nota fiscal emitida');target.innerHTML=`<div class="grid"><div class="card"><h2>Total de chamados</h2><h1>${data.length}${data.length===300?'+':''}</h1></div><div class="card"><h2>Em aberto</h2><h1>${open.length}${data.length===300?'+':''}</h1></div><div class="card"><h2>Concluídos</h2><h1>${data.filter(x=>['Serviço concluído','Nota fiscal emitida'].includes(x.status)).length}${data.length===300?'+':''}</h1></div></div><div class="card"><h2>Últimos chamados</h2>${data.slice(0,5).map(t=>`<div class="item"><strong>#${num(t.numero)}</strong> <span class="status">${esc(t.status)}</span><div class="meta">${date(t.created_at)}</div></div>`).join('Nenhum chamado até o momento.')}</div>`;}
 async function branches(target){if(profile.tipo!=='admin')return;const {data,error}=await db.from('lotericas').select('*').order('created_at',{ascending:false});if(error)throw error;target.innerHTML=`<div class="grid"><section class="card"><h2>Cadastrar lotérica</h2><form id="branch"><label>Nome da lotérica<input name="nome" required minlength="2"></label><label>Responsável<input name="responsavel"></label><label>Telefone<input name="telefone"></label><label>E-mail<input type="email" name="email"></label><label>Endereço<input name="endereco"></label><label>Bairro<input name="bairro"></label><label>Cidade<input name="cidade"></label><label>UF<input name="uf" maxlength="2"></label><button>Cadastrar</button></form></section><section class="card"><h2>Lotéricas cadastradas (${data.length})</h2>${data.map(b=>`<div class="item"><strong>${esc(b.nome)}</strong><div class="meta">${esc(b.cidade)} / ${esc(b.uf)} • ${esc(b.telefone)}</div><div class="meta">ID para vincular usuário: <code>${esc(b.id)}</code></div></div>`).join('Nenhuma lotérica.')}</section></div>`;document.getElementById('branch').onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));const {error}=await db.from('lotericas').insert(f);if(error)return errMsg(error);notice('Lotérica cadastrada. Para criar login, siga o guia do Supabase.');content();};}
 async function categories(target){const {data,error}=await db.from('categorias').select('*').order('nome');if(error)throw error;target.innerHTML=`<div class="grid"><div class="card"><h2>Nova categoria</h2><form id="category"><label>Nome<input name="nome" minlength="3" required></label><button>Adicionar</button></form></div><div class="card"><h2>Categorias</h2>${data.map(c=>`<div class="item">${esc(c.nome)}</div>`).join('Sem categorias')}</div></div>`;document.getElementById('category').onsubmit=async e=>{e.preventDefault();const nome=new FormData(e.target).get('nome').trim();const {error}=await db.from('categorias').insert({nome});if(error)return errMsg(error);notice('Categoria adicionada.');content();};}
 async function newTicket(target){const {data:cats,error:e1}=await db.from('categorias').select('id,nome').eq('ativa',true).order('nome');const {data:branch,error:e2}=await db.from('lotericas').select('*').eq('id',profile.loterica_id).single();if(e1||e2)throw e1||e2;target.innerHTML=`<div class="card"><h2>Abrir chamado técnico</h2><p>Lotérica: ${esc(branch.nome)}</p><form id="ticket"><label>Categoria<select name="categoria_id" required><option value="">Selecione</option>${cats.map(c=>`<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('')}</select></label><label>Descreva o problema<textarea name="descricao" required minlength="8"></textarea></label><label>Telefone de contato<input name="contato_telefone" value="${esc(branch.telefone)}" required></label><label>Endereço do atendimento<input name="endereco_atendimento" value="${esc(branch.endereco)}" required></label><label>Bairro<input name="bairro" value="${esc(branch.bairro)}"></label><label>Cidade<input name="cidade" value="${esc(branch.cidade)}"></label><button>Enviar chamado</button></form><p class="muted">Fotos e anexos serão implementados na próxima etapa.</p></div>`;document.getElementById('ticket').onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));f.loterica_id=profile.loterica_id;f.criado_por=user.id;const {data,error}=await db.from('chamados').insert(f).select('numero').single();if(error)return errMsg(error);notice(`Chamado registrado! Protocolo #${num(data.numero)}`);tab='chamados';render();};}
-async function tickets(target){const admin=profile.tipo==='admin';const {data,error}=await db.from('chamados').select('id,numero,loterica_id,descricao,status,created_at,contato_telefone,endereco_atendimento,bairro,cidade,categorias(nome),lotericas(nome)').order('created_at',{ascending:false}).limit(200);if(error)throw error;target.innerHTML=`<div class="card"><h2>Chamados (${data.length}${data.length===200?'+':''})</h2>${data.map(t=>`<article class="item"><strong>#${num(t.numero)}</strong> <span class="status">${esc(t.status)}</span><div class="meta">${esc(t.lotericas?.nome)} • ${esc(t.categorias?.nome)} • ${date(t.created_at)}</div><p>${esc(t.descricao)}</p><div class="meta">${esc(t.endereco_atendimento)} • ${esc(t.bairro)} • ${esc(t.cidade)} • ${esc(t.contato_telefone)}</div>${admin?`<label>Alterar status<select data-ticket="${t.id}">${statusList.filter(s=>['Novo chamado','Visita agendada','Em atendimento','Serviço concluído','Nota fiscal emitida',t.status].includes(s)).map(s=>`<option ${s===t.status?'selected':''}>${esc(s)}</option>`).join('')}</select></label>`:''}</article>`).join('Nenhum chamado encontrado.')}</div>`;if(admin)target.querySelectorAll('[data-ticket]').forEach(select=>select.onchange=async()=>{const {error}=await db.from('chamados').update({status:select.value}).eq('id',select.dataset.ticket);if(error)return errMsg(error);notice('Status atualizado.');content();});}
+async function tickets(target){const admin=profile.tipo==='admin';const {data,error}=await db.from('chamados').select('id,numero,loterica_id,descricao,status,created_at,contato_telefone,endereco_atendimento,bairro,cidade,categorias(nome),lotericas(nome)').order('created_at',{ascending:false}).limit(200);if(error)throw error;target.innerHTML=`<div class="card"><h2>Chamados (${data.length}${data.length===200?'+':''})</h2>${data.map(t=>`<article class="item"><strong>#${num(t.numero)}</strong> <span class="status">${esc(t.status)}</span><div class="meta">${esc(t.lotericas?.nome)} • ${esc(t.categorias?.nome)} • ${date(t.created_at)}</div><p>${esc(t.descricao)}</p><div class="meta">${esc(t.endereco_atendimento)} • ${esc(t.bairro)} • ${esc(t.cidade)} • ${esc(t.contato_telefone)}</div>${admin?`<label>Alterar status<select data-ticket="${t.id}">${statusList.filter(s=>['Novo chamado','Visita agendada','Em atendimento',t.status].includes(s)).map(s=>`<option ${s===t.status?'selected':''}>${esc(s)}</option>`).join('')}</select></label>`:''}</article>`).join('Nenhum chamado encontrado.')}</div>`;if(admin)target.querySelectorAll('[data-ticket]').forEach(select=>select.onchange=async()=>{const {error}=await db.from('chamados').update({status:select.value}).eq('id',select.dataset.ticket);if(error)return errMsg(error);notice('Status atualizado.');content();});}
 async function start(){if(!cfg?.url?.startsWith('https://')||cfg.key?.includes('COLE_AQUI')){notice('Abra config.js e preencha a URL e a chave publishable/anon do Supabase.',true);return;}db=window.supabase.createClient(cfg.url,cfg.key);const {data:{session}}=await db.auth.getSession();if(session)await initUser();else loginView();}
 start().catch(errMsg);
 
@@ -143,6 +143,115 @@ async function visits(target){
     p_data_agendada:instante.toISOString(),p_observacoes:String(f.get('observacoes')||'')});
    if(error)throw error;
    notice('Visita agendada no banco de dados.');await content();
+  }catch(ex){errMsg(ex);}finally{btn.disabled=false;}
+ };
+}
+
+
+// ETAPA 6 — conclusões de serviços e imagens em bucket privado.
+const FINAL_BUCKET = 'loteriatech-conclusoes';
+const FINAL_MIME = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp'};
+const UUID_V4 = () => (crypto?.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.floor(Math.random()*16);return (c==='x'?r:(r&3|8)).toString(16);}));
+function safeFile(file) {
+ if(!file || !file.size) return null;
+ if(!FINAL_MIME[file.type]) throw new Error('Use somente fotos JPEG, PNG ou WebP.');
+ if(file.size > 5*1024*1024) throw new Error('Cada foto deve ter no máximo 5 MB.');
+ return file;
+}
+async function uploadFinalPhoto(chamadoId,file) {
+ if(!file) return null;
+ const path=`${chamadoId}/${UUID_V4()}.${FINAL_MIME[file.type]}`;
+ const {error}=await db.storage.from(FINAL_BUCKET).upload(path,file,{contentType:file.type,upsert:false});
+ if(error) throw error;
+ return path;
+}
+async function completions(target){
+ const admin=profile.tipo==='admin';
+ const {data:concluidas,error:ce}=await db.from('conclusoes_servico')
+  .select('id,chamado_id,descricao_execucao,observacoes,valor_final_centavos,concluido_em,chamados(numero,lotericas(nome))')
+  .order('concluido_em',{ascending:false}).limit(200);
+ if(ce)throw ce;
+ const {data:fotos,error:fe}=await db.from('fotos_conclusao')
+  .select('id,conclusao_id,tipo,caminho').limit(400);
+ if(fe)throw fe;
+ let formHtml='';
+ if(admin){
+  const {data:chamados,error:te}=await db.from('chamados')
+    .select('id,numero,status,lotericas(nome)')
+    .in('status',['Orçamento aprovado','Visita agendada','Em atendimento'])
+    .order('created_at',{ascending:false}).limit(200);
+  if(te)throw te;
+  const {data:orcamentos,error:oe}=await db.from('orcamentos')
+    .select('chamado_id,versao,estado,total_centavos')
+    .in('chamado_id',chamados.map(c=>c.id).length ? chamados.map(c=>c.id) : ['00000000-0000-0000-0000-000000000000'])
+    .order('versao',{ascending:false});
+  if(oe)throw oe;
+  const ultimos=new Map();
+  for(const o of orcamentos)if(!ultimos.has(o.chamado_id)) ultimos.set(o.chamado_id,o);
+  const elegiveis=chamados.filter(c=>ultimos.get(c.id)?.estado==='aprovado');
+  formHtml=`<section class="card"><h2>Concluir serviço técnico</h2>
+   <p>O atendimento só poderá ser concluído quando o último orçamento estiver aprovado. O valor final não pode exceder o valor autorizado pelo cliente.</p>
+   <form id="form-conclusao">
+    <label>Chamado aprovado<select name="chamado" id="conclusao-chamado" required>
+     <option value="">Selecione um chamado</option>
+     ${elegiveis.map(c=>`<option value="${esc(c.id)}" data-limite="${ultimos.get(c.id).total_centavos}">${num(c.numero)} — ${esc(c.lotericas?.nome)} (${reais(ultimos.get(c.id).total_centavos)})</option>`).join('')}
+    </select></label>
+    <div class="meta" id="limite-conclusao">Selecione um chamado para ver o valor aprovado.</div>
+    <label>Serviço executado<textarea name="descricao" minlength="10" maxlength="3000" required placeholder="Descreva o que foi feito"></textarea></label>
+    <label>Valor final (R$)<input name="valor" type="number" min="0" step="0.01" required placeholder="180.00"></label>
+    <label>Observações (opcional)<textarea name="observacoes" maxlength="2000" placeholder="Informações adicionais sobre o atendimento"></textarea></label>
+    <label>Foto antes (opcional, até 5 MB)<input name="antes" type="file" accept="image/jpeg,image/png,image/webp"></label>
+    <label>Foto depois (opcional, até 5 MB)<input name="depois" type="file" accept="image/jpeg,image/png,image/webp"></label>
+    <button type="submit" ${elegiveis.length?'':'disabled'}>Registrar conclusão</button>
+   </form>${elegiveis.length?'':'<p class="muted">Nenhum chamado aprovado disponível para conclusão.</p>'}</section>`;
+ }
+ const cards=concluidas.map(c=>{
+  const fs=fotos.filter(f=>f.conclusao_id===c.id);
+  return `<article class="item"><strong>${num(c.chamados?.numero)} — ${esc(c.chamados?.lotericas?.nome)}</strong>
+   <span class="status">Serviço concluído</span>
+   <div class="meta">Concluído em ${date(c.concluido_em)}</div>
+   <p><strong>Serviço realizado:</strong> ${esc(c.descricao_execucao)}</p>
+   ${c.observacoes?`<p><strong>Observações:</strong> ${esc(c.observacoes)}</p>`:''}
+   <p><strong>Valor final:</strong> ${reais(c.valor_final_centavos)}</p>
+   ${fs.length?`<div class="acoes-orcamento">${fs.map(f=>`<button class="secondary" type="button" data-foto="${esc(f.id)}">Ver foto ${f.tipo==='antes'?'antes':'depois'}</button>`).join('')}</div>`:'<p class="meta">Sem fotos anexadas.</p>'}
+  </article>`;
+ }).join('Nenhum serviço concluído até o momento.');
+ target.innerHTML=formHtml+`<section class="card"><h2>${admin?'Histórico de serviços concluídos':'Meus serviços concluídos'}</h2>${cards}</section>`;
+ target.querySelectorAll('[data-foto]').forEach(btn=>btn.onclick=async()=>{
+  const foto=fotos.find(f=>f.id===btn.dataset.foto);
+  if(!foto)return;
+  btn.disabled=true;
+  const {data,error}=await db.storage.from(FINAL_BUCKET).createSignedUrl(foto.caminho,120);
+  btn.disabled=false;
+  if(error)return errMsg(error);
+  window.open(data.signedUrl,'_blank','noopener,noreferrer');
+ });
+ if(!admin)return;
+ const form=target.querySelector('#form-conclusao');
+ const sel=form.querySelector('#conclusao-chamado');
+ sel.onchange=()=>{const opt=sel.selectedOptions[0];
+  target.querySelector('#limite-conclusao').textContent=opt?.dataset?.limite
+   ?`Total aprovado: ${reais(Number(opt.dataset.limite))}`:'Selecione um chamado para ver o valor aprovado.';};
+ form.onsubmit=async e=>{
+  e.preventDefault();const btn=form.querySelector('button[type="submit"]');btn.disabled=true;
+  try{
+   const f=new FormData(form),id=String(f.get('chamado'));
+   const limite=Number(sel.selectedOptions[0]?.dataset?.limite);
+   const valor=moneyToCents(f.get('valor'));
+   if(!id||!Number.isFinite(limite)||valor>limite)throw new Error('Valor final não pode exceder o orçamento aprovado. Envie nova proposta para cobranças adicionais.');
+   const antes=safeFile(f.get('antes')),depois=safeFile(f.get('depois'));
+   if(!confirm(`Registrar conclusão no valor de ${reais(valor)}? Esta operação será definitiva.`))return;
+   notice('Enviando fotos e registrando conclusão...');
+   const pAntes=await uploadFinalPhoto(id,antes);
+   const pDepois=await uploadFinalPhoto(id,depois);
+   const {error}=await db.rpc('concluir_servico',{
+    p_chamado_id:id,p_descricao:String(f.get('descricao')),
+    p_observacoes:String(f.get('observacoes')||''),p_valor_final_centavos:valor,
+    p_foto_antes:pAntes,p_foto_depois:pDepois
+   });
+   if(error)throw error;
+   notice('Serviço concluído! Registro e valor final salvos no banco.');
+   await content();
   }catch(ex){errMsg(ex);}finally{btn.disabled=false;}
  };
 }
