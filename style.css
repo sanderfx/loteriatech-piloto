@@ -61,3 +61,17 @@ input[type="file"]{padding:10px;background:#fbfcff} .acoes-orcamento{margin-top:
 
 /* Etapa 6.1: cadastro de usuários */
 #cadastrar-acesso input { max-width:100% }
+
+/* Etapa 7 — Financeiro */
+
+.fin-kpi{border-top:4px solid var(--lt-orange)}
+.fin-kpi h1{margin:8px 0;font-size:clamp(22px,3vw,30px)}
+.fin-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.fin-filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px}
+.fin-amount{font-weight:750;font-size:20px;color:var(--lt-navy)}
+.fin-muted{color:#607994;font-size:13px}
+.fin-table-wrap{overflow-x:auto}
+.fin-table{width:100%;border-collapse:collapse;font-size:14px}
+.fin-table th,.fin-table td{text-align:left;border-bottom:1px solid var(--lt-border);padding:11px;white-space:nowrap}
+.fin-table th{color:var(--lt-navy);background:#f4f7fc}
+.fin-warning{border-left:4px solid #e68b35;padding:12px;background:#fff7ef}

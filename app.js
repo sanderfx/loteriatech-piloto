@@ -12,8 +12,8 @@ function loginView(){document.getElementById('userbar').innerHTML='';app.innerHT
 async function login(e){e.preventDefault();notice('Entrando...');const f=new FormData(e.target);const {error}=await db.auth.signInWithPassword({email:f.get('email'),password:f.get('password')});if(error)return errMsg(error);await initUser();}
 async function initUser(){const {data:{user:u},error}=await db.auth.getUser();if(error||!u){user=null;profile=null;loginView();return;}user=u;const {data:p,error:pe}=await db.from('perfis').select('*').eq('id',user.id).maybeSingle();if(pe)return errMsg(pe);if(!p||!p.ativo){await db.auth.signOut();user=null;profile=null;loginView();notice('Seu usuário ainda não foi vinculado a um perfil ativo. Peça ao administrador para cadastrar seu perfil no SQL Editor.',true);return;}profile=p;tab='inicio';notice('');render();}
 async function logout(){await db.auth.signOut();user=null;profile=null;notice('Sessão encerrada.');loginView();}
-function render(){let admin=profile.tipo==='admin';document.getElementById('userbar').innerHTML=`<span>${esc(profile.nome)} • ${admin?'Administrador':'Lotérica'}</span><button class="secondary" id="sair">Sair</button>`;document.getElementById('sair').onclick=logout;const tabs=admin?['inicio','chamados','orcamentos','visitas','conclusoes','lotericas','usuarios','categorias','limpeza']:['inicio','abrir','chamados','orcamentos','visitas','conclusoes'];const names={inicio:'Início',abrir:'Abrir chamado',chamados:'Chamados',orcamentos:'Orçamentos',visitas:'Visitas técnicas',conclusoes:'Conclusões',lotericas:'Lotéricas',usuarios:'Usuários',categorias:'Categorias',limpeza:'Limpeza de chamados'};app.innerHTML=`<h1>${admin?'Painel administrativo':'Área da lotérica'}</h1><p>Olá, ${esc(profile.nome)}. Acompanhe os serviços da LoteriaTech.</p><nav>${tabs.map(t=>`<button data-tab="${t}" class="${t===tab?'active':''}">${names[t]}</button>`).join('')}</nav><div id="content"></div>`;document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;render();});content();}
-async function content(){const target=document.getElementById('content');target.innerHTML='<div class="card">Carregando...</div>';try{if(tab==='inicio')await home(target);if(tab==='chamados')await tickets(target);if(tab==='orcamentos')await quotes(target);if(tab==='visitas')await visits(target);if(tab==='conclusoes')await completions(target);if(tab==='lotericas')await branches(target);if(tab==='usuarios')await usersPanel(target);if(tab==='categorias')await categories(target);if(tab==='limpeza')await cleanup(target);if(tab==='abrir')await newTicket(target);}catch(e){errMsg(e);target.innerHTML='<div class="card">Não foi possível carregar esta seção.</div>';}}
+function render(){let admin=profile.tipo==='admin';document.getElementById('userbar').innerHTML=`<span>${esc(profile.nome)} • ${admin?'Administrador':'Lotérica'}</span><button class="secondary" id="sair">Sair</button>`;document.getElementById('sair').onclick=logout;const tabs=admin?['inicio','chamados','orcamentos','visitas','conclusoes','financeiro','lotericas','usuarios','categorias','limpeza']:['inicio','abrir','chamados','orcamentos','visitas','conclusoes'];const names={inicio:'Início',abrir:'Abrir chamado',chamados:'Chamados',orcamentos:'Orçamentos',visitas:'Visitas técnicas',conclusoes:'Conclusões',financeiro:'Financeiro',lotericas:'Lotéricas',usuarios:'Usuários',categorias:'Categorias',limpeza:'Limpeza de chamados'};app.innerHTML=`<h1>${admin?'Painel administrativo':'Área da lotérica'}</h1><p>Olá, ${esc(profile.nome)}. Acompanhe os serviços da LoteriaTech.</p><nav>${tabs.map(t=>`<button data-tab="${t}" class="${t===tab?'active':''}">${names[t]}</button>`).join('')}</nav><div id="content"></div>`;document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;render();});content();}
+async function content(){const target=document.getElementById('content');target.innerHTML='<div class="card">Carregando...</div>';try{if(tab==='inicio')await home(target);if(tab==='chamados')await tickets(target);if(tab==='orcamentos')await quotes(target);if(tab==='visitas')await visits(target);if(tab==='conclusoes')await completions(target);if(tab==='financeiro')await finance(target);if(tab==='lotericas')await branches(target);if(tab==='usuarios')await usersPanel(target);if(tab==='categorias')await categories(target);if(tab==='limpeza')await cleanup(target);if(tab==='abrir')await newTicket(target);}catch(e){errMsg(e);target.innerHTML='<div class="card">Não foi possível carregar esta seção.</div>';}}
 async function home(target){let {data,error}=await db.from('chamados').select('id,status,numero,created_at').eq('arquivado',false).order('created_at',{ascending:false}).limit(300);if(error)throw error;const open=data.filter(x=>x.status!=='Serviço concluído'&&x.status!=='Nota fiscal emitida');target.innerHTML=`<div class="grid"><div class="card"><h2>Total de chamados</h2><h1>${data.length}${data.length===300?'+':''}</h1></div><div class="card"><h2>Em aberto</h2><h1>${open.length}${data.length===300?'+':''}</h1></div><div class="card"><h2>Concluídos</h2><h1>${data.filter(x=>['Serviço concluído','Nota fiscal emitida'].includes(x.status)).length}${data.length===300?'+':''}</h1></div></div><div class="card"><h2>Últimos chamados</h2>${data.slice(0,5).map(t=>`<div class="item"><strong>#${num(t.numero)}</strong> <span class="status">${esc(t.status)}</span><div class="meta">${date(t.created_at)}</div></div>`).join('Nenhum chamado até o momento.')}</div>`;}
 async function branches(target){if(profile.tipo!=='admin')return;const {data,error}=await db.from('lotericas').select('*').order('created_at',{ascending:false});if(error)throw error;target.innerHTML=`<div class="grid"><section class="card"><h2>Cadastrar lotérica</h2><form id="branch"><label>Nome da lotérica<input name="nome" required minlength="2"></label><label>Responsável<input name="responsavel"></label><label>Telefone<input name="telefone"></label><label>E-mail<input type="email" name="email"></label><label>Endereço<input name="endereco"></label><label>Bairro<input name="bairro"></label><label>Cidade<input name="cidade"></label><label>UF<input name="uf" maxlength="2"></label><button>Cadastrar</button></form></section><section class="card"><h2>Lotéricas cadastradas (${data.length})</h2>${data.map(b=>`<div class="item"><strong>${esc(b.nome)}</strong><div class="meta">${esc(b.cidade)} / ${esc(b.uf)} • ${esc(b.telefone)}</div><div class="meta">ID para vincular usuário: <code>${esc(b.id)}</code></div></div>`).join('Nenhuma lotérica.')}</section></div>`;document.getElementById('branch').onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));const {error}=await db.from('lotericas').insert(f);if(error)return errMsg(error);notice('Lotérica cadastrada. Para criar login, siga o guia do Supabase.');content();};}
 async function categories(target){
@@ -94,7 +94,7 @@ async function quotes(target){
   <h2 style="margin:10px 0">Total: ${reais(q.total_centavos)}</h2>
   <div class="meta">Válido até ${esc(q.validade.split('-').reverse().join('/'))}${q.respondido_em?' • Respondido em '+date(q.respondido_em):''}</div>
   ${q.observacao_cliente?`<p><strong>Observação do cliente:</strong> ${esc(q.observacao_cliente)}</p>`:''}
-  ${!admin&&q.estado==='pendente'?(q.validade < new Date().toLocaleDateString('en-CA') ? '<p class="muted">Orçamento vencido. Solicite nova proposta.</p>' : `<div class="acoes-orcamento"><button data-resposta="aprovar" data-id="${esc(q.id)}">Aprovar</button><button class="secondary" data-resposta="recusar" data-id="${esc(q.id)}">Recusar</button><button class="secondary" data-resposta="alteracao" data-id="${esc(q.id)}">Solicitar alteração</button></div>`):''}
+  ${!admin&&q.estado==='pendente'?(q.validade < finToday() ? '<p class="muted">Orçamento vencido. Solicite nova proposta.</p>' : `<div class="acoes-orcamento"><button data-resposta="aprovar" data-id="${esc(q.id)}">Aprovar</button><button class="secondary" data-resposta="recusar" data-id="${esc(q.id)}">Recusar</button><button class="secondary" data-resposta="alteracao" data-id="${esc(q.id)}">Solicitar alteração</button></div>`):''}
   </article>`).join('Nenhum orçamento disponível.');
  target.innerHTML=formulario+`<section class="card"><h2>${admin?'Orçamentos enviados':'Meus orçamentos'}</h2>${cards}</section>`;
  if(admin){
@@ -343,4 +343,117 @@ async function usersPanel(target){
      await content();
    }catch(ex){errMsg(ex);}finally{btn.disabled=false;}
  };
+}
+
+// ETAPA 7 — financeiro: apenas administrador; valores em centavos.
+const FIN_FORMS = {pix:'Pix',dinheiro:'Dinheiro',transferencia:'Transferência',cartao:'Cartão',boleto:'Boleto',outro:'Outro'};
+const finToday = () => {const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
+const finDate = d => d ? new Date(`${d}T12:00:00`).toLocaleDateString('pt-BR') : '—';
+async function finance(target){
+ if(profile.tipo!=='admin'){target.textContent='Acesso restrito ao administrador.';return;}
+ const [a,b,c]=await Promise.all([
+  db.from('financeiro_contas').select('id,conclusao_id,valor_centavos,criado_em,conclusoes_servico(chamado_id,concluido_em,chamados(numero,loterica_id,lotericas(nome)))').order('criado_em',{ascending:false}).limit(1000),
+  db.from('financeiro_pagamentos').select('id,conta_id,valor_centavos,recebido_em,forma,observacao,registrado_em,estornado_em,motivo_estorno').order('registrado_em',{ascending:false}).limit(1000),
+  db.from('lotericas').select('id,nome').order('nome')
+ ]);
+ if(a.error||b.error||c.error)throw a.error||b.error||c.error;
+ const contas=a.data||[],pagamentos=b.data||[],lotericas=c.data||[];
+ let loterica='',inicio='',fim='';
+ const byAccount=new Map();
+ for(const p of pagamentos){if(!byAccount.has(p.conta_id))byAccount.set(p.conta_id,[]);byAccount.get(p.conta_id).push(p);}
+ const getPaid=conta=> (byAccount.get(conta.id)||[]).filter(p=>!p.estornado_em).reduce((s,p)=>s+p.valor_centavos,0);
+ const getBranch=conta=>conta.conclusoes_servico?.chamados?.loterica_id||'';
+ const getName=conta=>conta.conclusoes_servico?.chamados?.lotericas?.nome||'Lotérica não identificada';
+ const protocol=conta=>num(conta.conclusoes_servico?.chamados?.numero??0);
+ target.innerHTML=`
+ <section class="card"><h2>Financeiro — contas a receber</h2><p>Registre recebimentos confirmados fora do sistema. Esta tela não cobra clientes nem movimenta dinheiro.</p>
+ <div class="fin-filters">
+  <label>Lotérica<select id="fin-filtro-loterica"><option value="">Todas as lotéricas</option>${lotericas.map(l=>`<option value="${esc(l.id)}">${esc(l.nome)}</option>`).join('')}</select></label>
+  <label>Concluído a partir de<input type="date" id="fin-filtro-inicio"></label>
+  <label>Concluído até<input type="date" id="fin-filtro-fim"></label>
+ </div><div class="grid" id="fin-metricas"></div></section>
+ <section class="card"><h2>Recebimentos por serviço</h2><div id="fin-contas"></div></section>
+ <section class="card"><h2>Histórico de pagamentos e estornos</h2><p class="fin-muted">Registros de pagamento preservados para conferência.</p><div id="fin-historico"></div></section>
+ ${contas.length===1000||pagamentos.length===1000?'<p class="fin-warning">Limite de 1.000 registros atingido. Os totais podem estar incompletos. Será necessário implementar paginação antes de usar este relatório em grande escala.</p>':''}`;
+ function filtered(){return contas.filter(o=>{
+  const d=(o.conclusoes_servico?.concluido_em||'').slice(0,10);
+  return (!loterica||getBranch(o)===loterica)&&(!inicio||d>=inicio)&&(!fim||d<=fim);
+ });}
+ function draw(){
+  const items=filtered();
+  const billed=items.reduce((s,o)=>s+o.valor_centavos,0);
+  const paid=items.reduce((s,o)=>s+getPaid(o),0);
+  const balance=billed-paid;
+  const completed=items.filter(o=>getPaid(o)>=o.valor_centavos).length;
+  target.querySelector('#fin-metricas').innerHTML=[
+   ['Valor dos serviços',billed],['Recebido',paid],['A receber',balance]
+  ].map(([label,value])=>`<div class="card fin-kpi"><div class="fin-muted">${label}</div><h1>${reais(value)}</h1></div>`).join('')+
+   `<div class="card fin-kpi"><div class="fin-muted">Contas quitadas</div><h1>${completed} / ${items.length}</h1></div>`;
+  target.querySelector('#fin-contas').innerHTML=items.map(o=>{
+   const total=o.valor_centavos,pago=getPaid(o),saldo=total-pago;
+   return `<article class="item"><strong>${protocol(o)} — ${esc(getName(o))}</strong>
+    <span class="status">${saldo===0?'Quitado':pago>0?'Parcial':'Pendente'}</span>
+    <div class="meta">Conclusão: ${date(o.conclusoes_servico?.concluido_em)}</div>
+    <p>Valor final: <strong>${reais(total)}</strong> · Recebido: <strong>${reais(pago)}</strong> · Saldo: <span class="fin-amount">${reais(saldo)}</span></p>
+    ${saldo>0?`<div class="fin-actions"><button type="button" data-pagar="${esc(o.id)}">Registrar recebimento</button></div>`:''}</article>`;
+  }).join('<p>Nenhuma conclusão encontrada para os filtros selecionados.</p>');
+  const ids=new Set(items.map(o=>o.id));
+  const hist=pagamentos.filter(p=>ids.has(p.conta_id));
+  target.querySelector('#fin-historico').innerHTML=hist.length?`<div class="fin-table-wrap"><table class="fin-table">
+   <thead><tr><th>Protocolo</th><th>Recebido em</th><th>Valor</th><th>Forma</th><th>Situação</th><th>Ação</th></tr></thead>
+   <tbody>${hist.map(p=>{
+     const o=items.find(x=>x.id===p.conta_id);
+     return `<tr><td>${protocol(o)}</td><td>${finDate(p.recebido_em)}</td><td>${reais(p.valor_centavos)}</td>
+     <td>${esc(FIN_FORMS[p.forma]||p.forma)}</td><td>${p.estornado_em?'Estornado':'Registrado'}</td>
+     <td>${p.estornado_em?`<span class="fin-muted" title="${esc(p.motivo_estorno||'')}">Motivo registrado</span>`:`<button class="secondary" type="button" data-estornar="${esc(p.id)}">Estornar</button>`}</td></tr>`;
+    }).join('')}</tbody></table></div>`:'<p>Nenhum pagamento registrado para os filtros selecionados.</p>';
+  target.querySelectorAll('[data-pagar]').forEach(btn=>btn.onclick=()=>openPayment(btn.dataset.pagar));
+  target.querySelectorAll('[data-estornar]').forEach(btn=>btn.onclick=()=>reversePayment(btn.dataset.estornar));
+ }
+ target.querySelector('#fin-filtro-loterica').onchange=e=>{loterica=e.target.value;draw();};
+ target.querySelector('#fin-filtro-inicio').onchange=e=>{inicio=e.target.value;draw();};
+ target.querySelector('#fin-filtro-fim').onchange=e=>{fim=e.target.value;draw();};
+ function openPayment(id){
+  const conta=contas.find(o=>o.id===id);if(!conta)return;
+  const saldo=conta.valor_centavos-getPaid(conta);
+  if(saldo<=0)return notice('Esta conta já está quitada.',true);
+  const wrapper=document.createElement('section');wrapper.className='card';wrapper.id='fin-pag-form';
+  wrapper.innerHTML=`<h2>Registrar recebimento — ${protocol(conta)}</h2><p>Saldo atual: <strong>${reais(saldo)}</strong>. Registre apenas pagamentos realmente recebidos.</p>
+   <form id="fin-receber"><label>Valor recebido (R$)<input name="valor" type="number" min="0.01" step="0.01" max="${(saldo/100).toFixed(2)}" required></label>
+   <label>Data do recebimento<input name="data" type="date" max="${finToday()}" required></label>
+   <label>Forma de pagamento<select name="forma">${Object.entries(FIN_FORMS).map(([v,n])=>`<option value="${v}">${n}</option>`).join('')}</select></label>
+   <label>Observação (opcional)<textarea name="observacao" maxlength="1000"></textarea></label>
+   <div class="fin-actions"><button type="submit">Salvar recebimento</button><button type="button" class="secondary" id="fin-cancelar">Cancelar</button></div></form>`;
+  const old=target.querySelector('#fin-pag-form');if(old)old.remove();
+  target.querySelector('#fin-contas').prepend(wrapper);
+  wrapper.querySelector('#fin-cancelar').onclick=()=>wrapper.remove();
+  wrapper.querySelector('input[name="data"]').value=finToday();
+  wrapper.querySelector('form').onsubmit=async e=>{
+   e.preventDefault();const f=new FormData(e.target);const submit=wrapper.querySelector('button[type="submit"]');
+   try{
+    const centavos=moneyToCents(f.get('valor'));
+    if(centavos<=0||centavos>saldo)throw new Error('O valor deve ser positivo e não exceder o saldo.');
+    if(!confirm(`Confirma o recebimento de ${reais(centavos)}?`))return;
+    submit.disabled=true;
+    const {error}=await db.rpc('financeiro_registrar_pagamento',{
+     p_conta_id:id,p_valor_centavos:centavos,p_recebido_em:f.get('data'),p_forma:f.get('forma'),p_observacao:String(f.get('observacao')||'')
+    });
+    if(error)throw error;
+    notice('Recebimento registrado com sucesso.');await content();
+   }catch(ex){errMsg(ex);submit.disabled=false;}
+  };
+  wrapper.scrollIntoView({behavior:'smooth',block:'center'});
+ }
+ async function reversePayment(id){
+  const p=pagamentos.find(p=>p.id===id);
+  if(!p||p.estornado_em)return;
+  const motivo=prompt(`Informe o motivo do estorno de ${reais(p.valor_centavos)} (mínimo 5 caracteres):`);
+  if(motivo===null)return;
+  if(motivo.trim().length<5){notice('Informe um motivo com ao menos 5 caracteres.',true);return;}
+  if(!confirm('Confirmar estorno? O lançamento original continuará no histórico.'))return;
+  const {error}=await db.rpc('financeiro_estornar_pagamento',{p_pagamento_id:id,p_motivo:motivo});
+  if(error)return errMsg(error);
+  notice('Estorno registrado, com histórico preservado.');await content();
+ }
+ draw();
 }
