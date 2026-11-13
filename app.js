@@ -12,8 +12,8 @@ function loginView(){document.getElementById('userbar').innerHTML='';app.innerHT
 async function login(e){e.preventDefault();notice('Entrando...');const f=new FormData(e.target);const {error}=await db.auth.signInWithPassword({email:f.get('email'),password:f.get('password')});if(error)return errMsg(error);await initUser();}
 async function initUser(){const {data:{user:u},error}=await db.auth.getUser();if(error||!u){user=null;profile=null;loginView();return;}user=u;const {data:p,error:pe}=await db.from('perfis').select('*').eq('id',user.id).maybeSingle();if(pe)return errMsg(pe);if(!p||!p.ativo){await db.auth.signOut();user=null;profile=null;loginView();notice('Seu usuário ainda não foi vinculado a um perfil ativo. Peça ao administrador para cadastrar seu perfil no SQL Editor.',true);return;}profile=p;tab='inicio';notice('');render();}
 async function logout(){await db.auth.signOut();user=null;profile=null;notice('Sessão encerrada.');loginView();}
-function render(){let admin=profile.tipo==='admin';document.getElementById('userbar').innerHTML=`<span>${esc(profile.nome)} • ${admin?'Administrador':'Lotérica'}</span><button class="secondary" id="sair">Sair</button>`;document.getElementById('sair').onclick=logout;const tabs=admin?['inicio','chamados','orcamentos','visitas','conclusoes','lotericas','categorias']:['inicio','abrir','chamados','orcamentos','visitas','conclusoes'];const names={inicio:'Início',abrir:'Abrir chamado',chamados:'Chamados',orcamentos:'Orçamentos',visitas:'Visitas técnicas',conclusoes:'Conclusões',lotericas:'Lotéricas',categorias:'Categorias'};app.innerHTML=`<h1>${admin?'Painel administrativo':'Área da lotérica'}</h1><p>Olá, ${esc(profile.nome)}. Acompanhe os serviços da LoteriaTech.</p><nav>${tabs.map(t=>`<button data-tab="${t}" class="${t===tab?'active':''}">${names[t]}</button>`).join('')}</nav><div id="content"></div>`;document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;render();});content();}
-async function content(){const target=document.getElementById('content');target.innerHTML='<div class="card">Carregando...</div>';try{if(tab==='inicio')await home(target);if(tab==='chamados')await tickets(target);if(tab==='orcamentos')await quotes(target);if(tab==='visitas')await visits(target);if(tab==='conclusoes')await completions(target);if(tab==='lotericas')await branches(target);if(tab==='categorias')await categories(target);if(tab==='abrir')await newTicket(target);}catch(e){errMsg(e);target.innerHTML='<div class="card">Não foi possível carregar esta seção.</div>';}}
+function render(){let admin=profile.tipo==='admin';document.getElementById('userbar').innerHTML=`<span>${esc(profile.nome)} • ${admin?'Administrador':'Lotérica'}</span><button class="secondary" id="sair">Sair</button>`;document.getElementById('sair').onclick=logout;const tabs=admin?['inicio','chamados','orcamentos','visitas','conclusoes','lotericas','usuarios','categorias']:['inicio','abrir','chamados','orcamentos','visitas','conclusoes'];const names={inicio:'Início',abrir:'Abrir chamado',chamados:'Chamados',orcamentos:'Orçamentos',visitas:'Visitas técnicas',conclusoes:'Conclusões',lotericas:'Lotéricas',usuarios:'Usuários',categorias:'Categorias'};app.innerHTML=`<h1>${admin?'Painel administrativo':'Área da lotérica'}</h1><p>Olá, ${esc(profile.nome)}. Acompanhe os serviços da LoteriaTech.</p><nav>${tabs.map(t=>`<button data-tab="${t}" class="${t===tab?'active':''}">${names[t]}</button>`).join('')}</nav><div id="content"></div>`;document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;render();});content();}
+async function content(){const target=document.getElementById('content');target.innerHTML='<div class="card">Carregando...</div>';try{if(tab==='inicio')await home(target);if(tab==='chamados')await tickets(target);if(tab==='orcamentos')await quotes(target);if(tab==='visitas')await visits(target);if(tab==='conclusoes')await completions(target);if(tab==='lotericas')await branches(target);if(tab==='usuarios')await usersPanel(target);if(tab==='categorias')await categories(target);if(tab==='abrir')await newTicket(target);}catch(e){errMsg(e);target.innerHTML='<div class="card">Não foi possível carregar esta seção.</div>';}}
 async function home(target){let {data,error}=await db.from('chamados').select('id,status,numero,created_at').order('created_at',{ascending:false}).limit(300);if(error)throw error;const open=data.filter(x=>x.status!=='Serviço concluído'&&x.status!=='Nota fiscal emitida');target.innerHTML=`<div class="grid"><div class="card"><h2>Total de chamados</h2><h1>${data.length}${data.length===300?'+':''}</h1></div><div class="card"><h2>Em aberto</h2><h1>${open.length}${data.length===300?'+':''}</h1></div><div class="card"><h2>Concluídos</h2><h1>${data.filter(x=>['Serviço concluído','Nota fiscal emitida'].includes(x.status)).length}${data.length===300?'+':''}</h1></div></div><div class="card"><h2>Últimos chamados</h2>${data.slice(0,5).map(t=>`<div class="item"><strong>#${num(t.numero)}</strong> <span class="status">${esc(t.status)}</span><div class="meta">${date(t.created_at)}</div></div>`).join('Nenhum chamado até o momento.')}</div>`;}
 async function branches(target){if(profile.tipo!=='admin')return;const {data,error}=await db.from('lotericas').select('*').order('created_at',{ascending:false});if(error)throw error;target.innerHTML=`<div class="grid"><section class="card"><h2>Cadastrar lotérica</h2><form id="branch"><label>Nome da lotérica<input name="nome" required minlength="2"></label><label>Responsável<input name="responsavel"></label><label>Telefone<input name="telefone"></label><label>E-mail<input type="email" name="email"></label><label>Endereço<input name="endereco"></label><label>Bairro<input name="bairro"></label><label>Cidade<input name="cidade"></label><label>UF<input name="uf" maxlength="2"></label><button>Cadastrar</button></form></section><section class="card"><h2>Lotéricas cadastradas (${data.length})</h2>${data.map(b=>`<div class="item"><strong>${esc(b.nome)}</strong><div class="meta">${esc(b.cidade)} / ${esc(b.uf)} • ${esc(b.telefone)}</div><div class="meta">ID para vincular usuário: <code>${esc(b.id)}</code></div></div>`).join('Nenhuma lotérica.')}</section></div>`;document.getElementById('branch').onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));const {error}=await db.from('lotericas').insert(f);if(error)return errMsg(error);notice('Lotérica cadastrada. Para criar login, siga o guia do Supabase.');content();};}
 async function categories(target){const {data,error}=await db.from('categorias').select('*').order('nome');if(error)throw error;target.innerHTML=`<div class="grid"><div class="card"><h2>Nova categoria</h2><form id="category"><label>Nome<input name="nome" minlength="3" required></label><button>Adicionar</button></form></div><div class="card"><h2>Categorias</h2>${data.map(c=>`<div class="item">${esc(c.nome)}</div>`).join('Sem categorias')}</div></div>`;document.getElementById('category').onsubmit=async e=>{e.preventDefault();const nome=new FormData(e.target).get('nome').trim();const {error}=await db.from('categorias').insert({nome});if(error)return errMsg(error);notice('Categoria adicionada.');content();};}
@@ -253,5 +253,59 @@ async function completions(target){
    notice('Serviço concluído! Registro e valor final salvos no banco.');
    await content();
   }catch(ex){errMsg(ex);}finally{btn.disabled=false;}
+ };
+}
+
+
+// ETAPA 6.1 — Cadastro de logins pela API administrativa segura.
+// A senha é enviada apenas à Edge Function e não é armazenada no navegador.
+async function usersPanel(target){
+ if(profile.tipo!=='admin') return;
+ const [{data:branches,error:be},{data:profiles,error:pe}]=await Promise.all([
+   db.from('lotericas').select('id,nome,email,ativa').order('nome'),
+   db.from('perfis').select('id,nome,tipo,loterica_id,ativo').eq('tipo','cliente').order('created_at',{ascending:false})
+ ]);
+ if(be||pe)throw be||pe;
+ target.innerHTML=`<div class="grid"><section class="card"><h2>Criar acesso de lotérico</h2>
+ <p>Escolha a lotérica já cadastrada. O e-mail será preenchido automaticamente, mas você poderá corrigi-lo. Defina uma senha inicial forte e entregue-a por um canal privado.</p>
+ <form id="cadastrar-acesso">
+  <label>Lotérica<select name="loterica_id" required><option value="">Selecione uma lotérica</option>${branches.filter(b=>b.ativa).map(b=>`<option value="${esc(b.id)}">${esc(b.nome)}</option>`).join('')}</select></label>
+  <label>Nome do usuário<input name="nome" autocomplete="off" required minlength="2" maxlength="120" placeholder="Responsável pela lotérica"></label>
+  <label>E-mail de acesso<input name="email" type="email" autocomplete="off" required maxlength="254"></label>
+  <label>Senha inicial<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label>
+  <label>Confirmar senha<input name="confirmar" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label>
+  <button type="submit">Criar usuário e senha</button>
+ </form>
+ <p class="meta">A senha não poderá ser consultada depois. O cliente poderá usar a recuperação de senha para trocá-la.</p></section>
+ <section class="card"><h2>Usuários de lotéricas (${profiles.length})</h2>
+ ${profiles.map(u=>`<div class="item"><strong>${esc(u.nome)}</strong> <span class="status">${u.ativo?'Ativo':'Bloqueado'}</span><div class="meta">${esc(branches.find(b=>b.id===u.loterica_id)?.nome||'Lotérica não encontrada')}</div><div class="meta">Identificador: ${esc(u.id)}</div></div>`).join('Nenhum usuário vinculado.')}<p class="meta">Bloqueio, redefinição administrativa de senha e múltiplos usuários por lotérica serão configurados em versões futuras.</p></section></div>`;
+ const form=target.querySelector('#cadastrar-acesso');
+ const branchSelect=form.elements.namedItem('loterica_id');
+ branchSelect.onchange=()=>{
+   const branch=branches.find(b=>b.id===branchSelect.value);
+   form.elements.namedItem('email').value=branch?.email||'';
+   form.elements.namedItem('nome').value=branch?.nome||'';
+ };
+ form.onsubmit=async e=>{
+   e.preventDefault();
+   const f=new FormData(form);
+   const password=String(f.get('password')||'');
+   if(password.length<12){notice('Use uma senha com pelo menos 12 caracteres.',true);return;}
+   if(password!==String(f.get('confirmar'))){notice('As duas senhas precisam ser iguais.',true);return;}
+   const btn=form.querySelector('button[type="submit"]');btn.disabled=true;
+   try{
+     const {data,error}=await db.functions.invoke('criar-usuario-loterica',{body:{
+       loterica_id:String(f.get('loterica_id')),nome:String(f.get('nome')).trim(),
+       email:String(f.get('email')).trim().toLowerCase(),password
+     }});
+     if(error){
+       let msg=error.message;
+       try{const json=await error.context?.json();if(json?.error)msg=json.error;}catch{}
+       throw Error(msg);
+     }
+     if(!data?.ok)throw Error(data?.error||'Não foi possível criar usuário.');
+     form.reset();notice('Usuário criado e vinculado à lotérica! Entregue a senha inicial por canal privado e teste o login.');
+     await content();
+   }catch(ex){errMsg(ex);}finally{btn.disabled=false;}
  };
 }

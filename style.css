@@ -58,3 +58,6 @@ footer { text-align:center; color:#627d9d; padding:35px; font-size:13px; }
 
 /* Etapa 6: fotos e conclusoes */
 input[type="file"]{padding:10px;background:#fbfcff} .acoes-orcamento{margin-top:14px} textarea{line-height:1.5}
+
+/* Etapa 6.1: cadastro de usuários */
+#cadastrar-acesso input { max-width:100% }
