@@ -75,3 +75,7 @@ input[type="file"]{padding:10px;background:#fbfcff} .acoes-orcamento{margin-top:
 .fin-table th,.fin-table td{text-align:left;border-bottom:1px solid var(--lt-border);padding:11px;white-space:nowrap}
 .fin-table th{color:var(--lt-navy);background:#f4f7fc}
 .fin-warning{border-left:4px solid #e68b35;padding:12px;background:#fff7ef}
+
+/* Etapa 8 */
+.nf-check {display:flex;align-items:flex-start;gap:10px;line-height:1.5;}
+.nf-check input {width:auto; margin-top:4px;}

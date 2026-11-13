@@ -12,8 +12,8 @@ function loginView(){document.getElementById('userbar').innerHTML='';app.innerHT
 async function login(e){e.preventDefault();notice('Entrando...');const f=new FormData(e.target);const {error}=await db.auth.signInWithPassword({email:f.get('email'),password:f.get('password')});if(error)return errMsg(error);await initUser();}
 async function initUser(){const {data:{user:u},error}=await db.auth.getUser();if(error||!u){user=null;profile=null;loginView();return;}user=u;const {data:p,error:pe}=await db.from('perfis').select('*').eq('id',user.id).maybeSingle();if(pe)return errMsg(pe);if(!p||!p.ativo){await db.auth.signOut();user=null;profile=null;loginView();notice('Seu usuário ainda não foi vinculado a um perfil ativo. Peça ao administrador para cadastrar seu perfil no SQL Editor.',true);return;}profile=p;tab='inicio';notice('');render();}
 async function logout(){await db.auth.signOut();user=null;profile=null;notice('Sessão encerrada.');loginView();}
-function render(){let admin=profile.tipo==='admin';document.getElementById('userbar').innerHTML=`<span>${esc(profile.nome)} • ${admin?'Administrador':'Lotérica'}</span><button class="secondary" id="sair">Sair</button>`;document.getElementById('sair').onclick=logout;const tabs=admin?['inicio','chamados','orcamentos','visitas','conclusoes','financeiro','lotericas','usuarios','categorias','limpeza']:['inicio','abrir','chamados','orcamentos','visitas','conclusoes'];const names={inicio:'Início',abrir:'Abrir chamado',chamados:'Chamados',orcamentos:'Orçamentos',visitas:'Visitas técnicas',conclusoes:'Conclusões',financeiro:'Financeiro',lotericas:'Lotéricas',usuarios:'Usuários',categorias:'Categorias',limpeza:'Limpeza de chamados'};app.innerHTML=`<h1>${admin?'Painel administrativo':'Área da lotérica'}</h1><p>Olá, ${esc(profile.nome)}. Acompanhe os serviços da LoteriaTech.</p><nav>${tabs.map(t=>`<button data-tab="${t}" class="${t===tab?'active':''}">${names[t]}</button>`).join('')}</nav><div id="content"></div>`;document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;render();});content();}
-async function content(){const target=document.getElementById('content');target.innerHTML='<div class="card">Carregando...</div>';try{if(tab==='inicio')await home(target);if(tab==='chamados')await tickets(target);if(tab==='orcamentos')await quotes(target);if(tab==='visitas')await visits(target);if(tab==='conclusoes')await completions(target);if(tab==='financeiro')await finance(target);if(tab==='lotericas')await branches(target);if(tab==='usuarios')await usersPanel(target);if(tab==='categorias')await categories(target);if(tab==='limpeza')await cleanup(target);if(tab==='abrir')await newTicket(target);}catch(e){errMsg(e);target.innerHTML='<div class="card">Não foi possível carregar esta seção.</div>';}}
+function render(){let admin=profile.tipo==='admin';document.getElementById('userbar').innerHTML=`<span>${esc(profile.nome)} • ${admin?'Administrador':'Lotérica'}</span><button class="secondary" id="sair">Sair</button>`;document.getElementById('sair').onclick=logout;const tabs=admin?['inicio','chamados','orcamentos','visitas','conclusoes','financeiro','notas','lotericas','usuarios','categorias','limpeza']:['inicio','abrir','chamados','orcamentos','visitas','conclusoes','notas'];const names={inicio:'Início',abrir:'Abrir chamado',chamados:'Chamados',orcamentos:'Orçamentos',visitas:'Visitas técnicas',conclusoes:'Conclusões',financeiro:'Financeiro',notas:'Notas fiscais',lotericas:'Lotéricas',usuarios:'Usuários',categorias:'Categorias',limpeza:'Limpeza de chamados'};app.innerHTML=`<h1>${admin?'Painel administrativo':'Área da lotérica'}</h1><p>Olá, ${esc(profile.nome)}. Acompanhe os serviços da LoteriaTech.</p><nav>${tabs.map(t=>`<button data-tab="${t}" class="${t===tab?'active':''}">${names[t]}</button>`).join('')}</nav><div id="content"></div>`;document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=el.dataset.tab;render();});content();}
+async function content(){const target=document.getElementById('content');target.innerHTML='<div class="card">Carregando...</div>';try{if(tab==='inicio')await home(target);if(tab==='chamados')await tickets(target);if(tab==='orcamentos')await quotes(target);if(tab==='visitas')await visits(target);if(tab==='conclusoes')await completions(target);if(tab==='financeiro')await finance(target);if(tab==='notas')await fiscalNotes(target);if(tab==='lotericas')await branches(target);if(tab==='usuarios')await usersPanel(target);if(tab==='categorias')await categories(target);if(tab==='limpeza')await cleanup(target);if(tab==='abrir')await newTicket(target);}catch(e){errMsg(e);target.innerHTML='<div class="card">Não foi possível carregar esta seção.</div>';}}
 async function home(target){let {data,error}=await db.from('chamados').select('id,status,numero,created_at').eq('arquivado',false).order('created_at',{ascending:false}).limit(300);if(error)throw error;const open=data.filter(x=>x.status!=='Serviço concluído'&&x.status!=='Nota fiscal emitida');target.innerHTML=`<div class="grid"><div class="card"><h2>Total de chamados</h2><h1>${data.length}${data.length===300?'+':''}</h1></div><div class="card"><h2>Em aberto</h2><h1>${open.length}${data.length===300?'+':''}</h1></div><div class="card"><h2>Concluídos</h2><h1>${data.filter(x=>['Serviço concluído','Nota fiscal emitida'].includes(x.status)).length}${data.length===300?'+':''}</h1></div></div><div class="card"><h2>Últimos chamados</h2>${data.slice(0,5).map(t=>`<div class="item"><strong>#${num(t.numero)}</strong> <span class="status">${esc(t.status)}</span><div class="meta">${date(t.created_at)}</div></div>`).join('Nenhum chamado até o momento.')}</div>`;}
 async function branches(target){if(profile.tipo!=='admin')return;const {data,error}=await db.from('lotericas').select('*').order('created_at',{ascending:false});if(error)throw error;target.innerHTML=`<div class="grid"><section class="card"><h2>Cadastrar lotérica</h2><form id="branch"><label>Nome da lotérica<input name="nome" required minlength="2"></label><label>Responsável<input name="responsavel"></label><label>Telefone<input name="telefone"></label><label>E-mail<input type="email" name="email"></label><label>Endereço<input name="endereco"></label><label>Bairro<input name="bairro"></label><label>Cidade<input name="cidade"></label><label>UF<input name="uf" maxlength="2"></label><button>Cadastrar</button></form></section><section class="card"><h2>Lotéricas cadastradas (${data.length})</h2>${data.map(b=>`<div class="item"><strong>${esc(b.nome)}</strong><div class="meta">${esc(b.cidade)} / ${esc(b.uf)} • ${esc(b.telefone)}</div><div class="meta">ID para vincular usuário: <code>${esc(b.id)}</code></div></div>`).join('Nenhuma lotérica.')}</section></div>`;document.getElementById('branch').onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));const {error}=await db.from('lotericas').insert(f);if(error)return errMsg(error);notice('Lotérica cadastrada. Para criar login, siga o guia do Supabase.');content();};}
 async function categories(target){
@@ -456,4 +456,82 @@ async function finance(target){
   notice('Estorno registrado, com histórico preservado.');await content();
  }
  draw();
+}
+
+
+// ETAPA 8 — registro de NFS-e já emitidas EXTERNAMENTE (NÃO emite notas).
+const NF_BUCKET = 'loteriatech-notas';
+const nfCleanCnpj = v => String(v||'').replace(/\D/g,'');
+const nfISODate = d => d ? new Date(`${d}T12:00:00`).toLocaleDateString('pt-BR') : '—';
+async function fiscalNotes(target){
+ const admin=profile.tipo==='admin';
+ const [nr,cr]=await Promise.all([
+  db.from('notas_fiscais').select('id,conclusao_id,numero,serie,cnpj_prestador,emitida_em,valor_centavos,caminho_pdf,registrada_em,conclusoes_servico(chamado_id,chamados(numero,lotericas(nome)))').order('registrada_em',{ascending:false}).limit(200),
+  admin ? db.from('conclusoes_servico').select('id,valor_final_centavos,chamado_id,chamados(numero,lotericas(nome))').order('concluido_em',{ascending:false}).limit(200) : Promise.resolve({data:[],error:null})
+ ]);
+ if(nr.error||cr.error) throw nr.error||cr.error;
+ const notas=nr.data||[];const concluidas=cr.data||[];
+ const usados=new Set(notas.map(n=>n.conclusao_id));
+ const disponiveis=concluidas.filter(c=>!usados.has(c.id));
+ const form=admin?`<section class="card"><h2>Registrar nota fiscal emitida</h2>
+ <p><strong>Importante:</strong> este formulário não emite NFS-e. Envie apenas um PDF de nota fiscal verdadeira já emitida por sistema fiscal autorizado. Não envie orçamento ou recibo.</p>
+ <form id="nf-form">
+ <label>Serviço concluído<select name="conclusao" required><option value="">Selecione</option>${disponiveis.map(c=>`<option value="${esc(c.id)}" data-valor="${c.valor_final_centavos}">${num(c.chamados?.numero)} — ${esc(c.chamados?.lotericas?.nome)} — ${reais(c.valor_final_centavos)}</option>`).join('')}</select></label>
+ <label>Número da NFS-e<input name="numero" required minlength="1" maxlength="60" placeholder="Número impresso no documento"></label>
+ <label>Série (se houver)<input name="serie" maxlength="30" placeholder="Série da nota"></label>
+ <label>CNPJ do prestador (14 dígitos)<input name="cnpj" required inputmode="numeric" minlength="14" maxlength="18" placeholder="00.000.000/0000-00"></label>
+ <label>Data de emissão<input name="data" type="date" max="${finToday()}" required></label>
+ <label>Valor da nota (R$)<input name="valor" type="number" step="0.01" min="0.01" required></label>
+ <label>PDF da NFS-e<input name="pdf" type="file" accept="application/pdf,.pdf" required></label>
+ <label class="nf-check"><input name="verdadeira" type="checkbox" required> Confirmo que este PDF corresponde a uma NFS-e efetivamente emitida em sistema fiscal autorizado.</label>
+ <button type="submit" ${disponiveis.length?'':'disabled'}>Registrar nota e enviar PDF</button></form>
+ ${disponiveis.length?'':'<p class="muted">Não há serviços concluídos disponíveis sem nota cadastrada nesta lista (máximo de 200).</p>'}
+ </section>`:'';
+ target.innerHTML=form+`<section class="card"><h2>${admin?'Notas fiscais registradas':'Minhas notas fiscais'}</h2>
+ <p>Documentos emitidos externamente, armazenados de forma privada. A LoteriaTech não verifica a autenticidade fiscal automaticamente.</p>
+ ${notas.map(n=>`<article class="item"><strong>NFS-e nº ${esc(n.numero)}${n.serie?' — Série '+esc(n.serie):''}</strong>
+ <div class="meta">${num(n.conclusoes_servico?.chamados?.numero)} — ${esc(n.conclusoes_servico?.chamados?.lotericas?.nome)}</div>
+ <div class="meta">Emissão: ${nfISODate(n.emitida_em)} • CNPJ prestador: ${esc(n.cnpj_prestador)} • Valor: ${reais(n.valor_centavos)}</div>
+ <div class="acoes-orcamento"><button type="button" class="secondary" data-nf="${esc(n.id)}">Abrir PDF</button></div></article>`).join('Nenhuma nota fiscal registrada.')}</section>
+ ${notas.length===200?'<p class="meta">Limite de 200 notas exibidas. Implemente paginação se necessário.</p>':''}`;
+ target.querySelectorAll('[data-nf]').forEach(btn=>btn.onclick=async()=>{
+  const nota=notas.find(n=>n.id===btn.dataset.nf);if(!nota)return;
+  btn.disabled=true;
+  try{const {data,error}=await db.storage.from(NF_BUCKET).createSignedUrl(nota.caminho_pdf,120);
+   if(error)throw error;window.open(data.signedUrl,'_blank','noopener,noreferrer');
+  }catch(ex){errMsg(ex);}finally{btn.disabled=false;}
+ });
+ if(!admin)return;
+ const el=target.querySelector('#nf-form');
+ el.querySelector('input[name="data"]').value=finToday();
+ const selector=el.querySelector('select[name="conclusao"]');
+ selector.onchange=()=>{const val=selector.selectedOptions[0]?.dataset?.valor;
+  el.querySelector('input[name="valor"]').value=val==null?'':(Number(val)/100).toFixed(2);};
+ el.onsubmit=async e=>{
+  e.preventDefault();const btn=el.querySelector('button[type="submit"]');
+  try{
+   const f=new FormData(el),conclusao=String(f.get('conclusao')||'');
+   const pdf=f.get('pdf');if(!conclusao)throw new Error('Selecione um serviço concluído.');
+   if(!(pdf instanceof File)||!pdf.size||pdf.size>10*1024*1024||!pdf.name.toLowerCase().endsWith('.pdf'))
+    throw new Error('Envie um PDF de até 10 MB.');
+   const header=new Uint8Array(await pdf.slice(0,5).arrayBuffer());
+   if(String.fromCharCode(...header)!=='%PDF-')throw new Error('O arquivo selecionado não parece ser um PDF válido.');
+   const cnpj=nfCleanCnpj(f.get('cnpj'));
+   if(cnpj.length!==14)throw new Error('CNPJ deve conter 14 dígitos.');
+   const total=moneyToCents(f.get('valor'));
+   if(total<=0)throw new Error('Informe um valor válido.');
+   if(!f.get('verdadeira'))throw new Error('Confirme que a NFS-e já foi efetivamente emitida.');
+   if(!confirm('Registrar o documento fiscal já emitido? Esta etapa NÃO emite nota fiscal.'))return;
+   btn.disabled=true;notice('Enviando PDF e registrando dados...');
+   const path=`${conclusao}/${UUID_V4()}.pdf`;
+   const up=await db.storage.from(NF_BUCKET).upload(path,pdf,{contentType:'application/pdf',upsert:false});
+   if(up.error)throw up.error;
+   const {error}=await db.rpc('registrar_nota_fiscal',{
+    p_conclusao_id:conclusao,p_numero:String(f.get('numero')).trim(),p_serie:String(f.get('serie')||'').trim(),
+    p_cnpj_prestador:cnpj,p_emitida_em:f.get('data'),p_valor_centavos:total,p_caminho_pdf:path
+   });
+   if(error)throw new Error(error.message+' (O PDF pode ter sido enviado; avise o administrador antes de tentar novamente.)');
+   notice('Nota fiscal já emitida registrada. PDF disponível para a lotérica.');await content();
+  }catch(ex){errMsg(ex);}finally{btn.disabled=false;}
+ };
 }
