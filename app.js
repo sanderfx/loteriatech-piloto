@@ -272,8 +272,8 @@ async function usersPanel(target){
   <label>Lotérica<select name="loterica_id" required><option value="">Selecione uma lotérica</option>${branches.filter(b=>b.ativa).map(b=>`<option value="${esc(b.id)}">${esc(b.nome)}</option>`).join('')}</select></label>
   <label>Nome do usuário<input name="nome" autocomplete="off" required minlength="2" maxlength="120" placeholder="Responsável pela lotérica"></label>
   <label>E-mail de acesso<input name="email" type="email" autocomplete="off" required maxlength="254"></label>
-  <label>Senha inicial<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label>
-  <label>Confirmar senha<input name="confirmar" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label>
+  <label>Senha inicial<input name="password" type="password" autocomplete="new-password" minlength="6" maxlength="8" required></label>
+  <label>Confirmar senha<input name="confirmar" type="password" autocomplete="new-password" minlength="6" maxlength="8" required></label>
   <button type="submit">Criar usuário e senha</button>
  </form>
  <p class="meta">A senha não poderá ser consultada depois. O cliente poderá usar a recuperação de senha para trocá-la.</p></section>
@@ -290,7 +290,7 @@ async function usersPanel(target){
    e.preventDefault();
    const f=new FormData(form);
    const password=String(f.get('password')||'');
-   if(password.length<12){notice('Use uma senha com pelo menos 12 caracteres.',true);return;}
+   if(password.length<6||password.length>8){notice('A senha deve ter de 6 a 8 caracteres.',true);return;}
    if(password!==String(f.get('confirmar'))){notice('As duas senhas precisam ser iguais.',true);return;}
    const btn=form.querySelector('button[type="submit"]');btn.disabled=true;
    try{
